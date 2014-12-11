@@ -7,35 +7,30 @@ import json
 
 render = web.template.render('templates/')
 urls = (
-    '/user', 'index',
-    '/user/(.*)', 'index'
+    '/user/(.*)', 'index',
 )
 
 
 class index:
 
-    def GET(self, *name):
-        user_info = web.input()
-        user = select_user(user_info.name)
-        print "it is a get request about ", name
+    def GET(self, name):
+        users = select_user(name)
+        print "it is a get request about "
         web.header('content-type', 'text/json')
-        return json.dumps(user)
+        return json.dumps(users)
 
     def POST(self, *name):  # post参数必须跟请求数对应
-        print "it is a post request about "
-        user_info = web.input()
-        age = ""
-        try:
-            age = user_info.age
-        except AttributeError, e:
-            pass
+        user_info = web.input(name=None, age=0)
+        print "it is a post request about ", user_info
+        age = user_info['age']
         rowcount = insert_user(user_info.name, age)
+        print "the result is ", rowcount
         return rowcount
 
-    def PUT(self):
+    def PUT(self, name):
         user_info = web.input()
+        print "it is a put request ", user_info
         insert_user(user_info.name, user_info.age)
-        print "it is a put request"
         return 0
 
     def PATCH(self):
@@ -68,9 +63,10 @@ def insert_user(name, age=0):
     sqliteConn = sqlite3.connect("test.db")
     cursor = sqliteConn.cursor()
     sql_insert = "insert into user (name, age) values (?, ?);"
-    rowcount = cursor.execute(sql_insert, (name, age))
-    sqliteConn.commit()
+    cursor.execute(sql_insert, (name, age))
+    rowcount = cursor.rowcount
     cursor.close()
+    sqliteConn.commit()
     sqliteConn.close()
     return rowcount
 
@@ -81,10 +77,18 @@ def select_user(name):
     sql_insert = "select * from user WHERE name=?"
     cursor.execute(sql_insert, (name,))
     users = cursor.fetchall()
+    user_list = []
+    for user in users:
+        user_dict = dict()
+        user_dict['id'] = user[0]
+        user_dict['pid'] = user[1]
+        user_dict['name'] = user[2]
+        user_dict['age'] = user[3]
+        user_list.append(user_dict)
     sqliteConn.commit()
     cursor.close()
     sqliteConn.close()
-    return users
+    return user_list
 
 
 def update_user(name, age):
