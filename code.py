@@ -9,15 +9,20 @@ from lxml import etree
 render = web.template.render('templates/')
 urls = (
     '/user/(.*)', 'index',
+    '/user_/(.*)', 'index',
     '/cookie', 'cookie',
     '/head', 'head',
+    '/auth_head', 'auth_head'
     # '/user', 'index2'
 )
 
 
 class index:
     def GET(self, name):
-        users = select_user(name)
+        params = web.input(page=1, size=5)
+        page = params.page
+        size = params.size
+        users = select_user(name, page, size)
         print "it is a get request about ", name
         web.header('content-type', 'application/json')
         return json.dumps(users)
@@ -39,9 +44,10 @@ class index:
 
     def PATCH(self, name):
         print "it is a patch request ", name
-        user_data = web.input()
-        print user_data
-        update_user(user_data.name, user_data.age)
+        user_data = web.data()
+        user_info_dict = eval(user_data)
+        print user_info_dict
+        update_user(user_info_dict['name'], user_info_dict['age'])
         return 0
 
     def DELETE(self, name):
@@ -75,11 +81,24 @@ class cookie:
 
 class head:
     def GET(self):
-        # header = web.ctx.env.get("headkey1", "not exist key1")
+
+        # header = web.ctx.env.get("HTTP_REFERER", "not exist key1")
         header = web.input()
         # result = {'testcookie': header.testcookie}
-        print 'get head test ', header
+        print 'get head test ', web.ctx.env
         # return json.dumps(result)
+
+class auth_head:
+    def GET(self):
+        auth = web.ctx.env.get("HTTP_AUTHORIZATION", "none")
+        # header = web.input()
+        # result = {'testcookie': header.testcookie}
+        print 'get head test ', web.ctx.env
+        # return json.dumps(result)
+        if auth == 'none':
+            raise web.unauthorized()
+        else:
+            return 1
 
 
 def init_user():
@@ -106,32 +125,32 @@ def insert_user(name, age=0):
     return rowcount
 
 
-def select_user(name):
+def select_user(name, page, size):
     sqliteConn = sqlite3.connect("test.db")
     cursor = sqliteConn.cursor()
     sql_insert = "select * from user WHERE name=?"
     sql_insert_all = "select * from user"
     print "test 1 ", name is None
     print "test 2 ", len(name)
-    print "test 3 ", str(name)
     if len(name) == 0:
         cursor.execute(sql_insert_all)
+        users = cursor.fetchall()
+        user_list = []
+        for user in users:
+            user_dict = dict()
+            user_dict['pid'] = user[0]
+            user_dict['name'] = user[1]
+            user_dict['age'] = user[2]
+            user_list.append(user_dict)
     else:
         cursor.execute(sql_insert, (name,))
-    users = cursor.fetchone()
-    user_list = []
-    print "select users ", users
-    user_dict = {'name':users[2], 'age':users[3]}
-    # for user in users:
-    #     user_dict = dict()
-    #     user_dict['pid'] = user[0]
-    #     user_dict['name'] = user[1]
-    #     user_dict['age'] = user[2]
-    #     user_list.append(user_dict)
-    sqliteConn.commit()
-    cursor.close()
-    sqliteConn.close()
-    return user_dict
+        users = cursor.fetchone()
+        print "select users ", users
+        user_dict = {'name': users[2], 'age': users[3]}
+        sqliteConn.commit()
+        cursor.close()
+        sqliteConn.close()
+        return user_dict
 
 
 def update_user(name, age):
