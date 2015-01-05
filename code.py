@@ -1,10 +1,11 @@
 __author__ = 'Administrator'
 # coding: utf-8
 
-import web
 import sqlite3
 import json
-from lxml import etree
+
+import web
+
 
 render = web.template.render('templates/')
 urls = (
@@ -12,12 +13,15 @@ urls = (
     '/user_/(.*)', 'index',
     '/cookie', 'cookie',
     '/head', 'head',
-    '/auth_head', 'auth_head'
+    '/auth_head', 'auth_head',
+    '/favorite/books/(\d+)', 'favorite.Favorite',
+    '/favorite/books', 'favorite.Favorite'
     # '/user', 'index2'
 )
 
 
 class index:
+
     def GET(self, name):
         params = web.input(page=1, size=5)
         page = params.page
@@ -25,6 +29,7 @@ class index:
         users = select_user(name, page, size)
         print "it is a get request about ", name
         web.header('content-type', 'application/json')
+
         return json.dumps(users)
 
     def POST(self, *name):  # post参数必须跟请求数对应
