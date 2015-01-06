@@ -6,20 +6,20 @@ import sqlite3
 import web
 
 
-class Favorite:
+class Books:
     def __init__(self):
         pass
 
-    def GET(self, id):
-        params = web.input(page=0, size=10)
-        page = params.page
-        size = params.size
-        favorites = select_favorite(id, page, size)
+    def GET(self):
+        params = web.input(offset=0, limit=10)
+        offset = params.offset
+        limit = params.limit
+        favorites = select_favorite_books(offset, limit)
         print "it is a get request about ", id
         web.header('content-type', 'application/json')
         return json.dumps(favorites)
 
-    def POST(self, *id):  # post参数必须跟请求数对应
+    def POST(self):
         favorite_info = web.data()
         favorite_info_dict = eval(favorite_info)
         print "it is a post request about ", favorite_info
@@ -27,9 +27,23 @@ class Favorite:
         print "the result is ", rowcount
         return rowcount
 
+
+class Book:
+    def __init__(self):
+        pass
+
+    def GET(self, id):
+        favorite = select_favorite_book_by_id(id, 0)
+        print "it is a get request about ", id
+        web.header('content-type', 'application/json')
+        if favorite is None:
+            return ""
+        else:
+            return json.dumps(favorite)
+
     def DELETE(self, id):
         print "it is a delete request"
-        delete_favorite(id)
+        delete_favorite(id, 0)
         return 0
 
 
@@ -57,37 +71,52 @@ def insert_favorite(book_id, book_name):
     return rowcount
 
 
-def select_favorite(id, offset, limit):
+def select_favorite_books(offset, limit):
     sqliteconn = sqlite3.connect("test.db")
     cursor = sqliteconn.cursor()
-    # sql = "select * from favorite WHERE name=?"
 
-    sql = "select * from favorite"
-    if len(id) >= 1:
-        sql += "WHERE name=?"
-    sql += " LIMIT ? OFFSET ?"
+    sql = "select * from favorite LIMIT ? OFFSET ?"
 
-    print "id is None ? ", id is None
-    print "len(id): ", len(id)
-    cursor.execute(sql, (id, limit, offset,))
-    favorites = cursor.fetchone()
+    cursor.execute(sql, (limit, offset,))
+    favorites = cursor.fetchall()
     print "select favorites ", favorites
     favorites_as_dict = []
     for favorite in favorites:
         favorite_as_dict = {
-            'book_id': favorite.book_id,
-            'book_name': favorite.book_name}
+            'book_id': favorite[1],
+            'book_name': favorite[2]}
         favorites_as_dict.append(favorite_as_dict)
     sqliteconn.commit()
     cursor.close()
     sqliteconn.close()
     return json.dumps(favorites_as_dict)
 
-def delete_favorite(id):
+
+def select_favorite_book_by_id(bookid, userid):
+    print "bookid = ", bookid
     sqliteconn = sqlite3.connect("test.db")
     cursor = sqliteconn.cursor()
-    sql_delete = "delete from favorite where book_id=?"
-    cursor.execute(sql_delete, (id,))
+    try:
+        sql = "select * from favorite WHERE book_id=? AND user_id = ?"
+        cursor.execute(sql, (bookid, userid,))
+        favorite = cursor.fetchone()
+        if favorite is not None:
+            result = {
+                'book_id': favorite[1],
+                'book_name': favorite[2]}
+            return result
+    finally:
+        sqliteconn.commit()
+        cursor.close()
+        sqliteconn.close()
+    return ""
+
+
+def delete_favorite(bookid, userid):
+    sqliteconn = sqlite3.connect("test.db")
+    cursor = sqliteconn.cursor()
+    sql_delete = "delete from favorite WHERE book_id=? AND user_id = ?"
+    cursor.execute(sql_delete, (bookid, userid))
     sqliteconn.commit()
     cursor.close()
     sqliteconn.close()

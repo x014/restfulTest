@@ -14,8 +14,8 @@ urls = (
     '/cookie', 'cookie',
     '/head', 'head',
     '/auth_head', 'auth_head',
-    '/favorite/books/(\d+)', 'favorite.Favorite',
-    '/favorite/books', 'favorite.Favorite'
+    '/favorite/books/(\d+)', 'favorite.Book',
+    '/favorite/books', 'favorite.Books'
     # '/user', 'index2'
 )
 
